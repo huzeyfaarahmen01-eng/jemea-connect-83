@@ -14,16 +14,225 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      audit_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: string | null
+          id: string
+          ip_address: string | null
+          user_id: string | null
+          user_type: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+          user_type: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: string | null
+          id?: string
+          ip_address?: string | null
+          user_id?: string | null
+          user_type?: string
+        }
+        Relationships: []
+      }
+      conversation_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          sender_name: string
+          sender_type: Database["public"]["Enums"]["sender_type"]
+          submission_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          sender_name: string
+          sender_type: Database["public"]["Enums"]["sender_type"]
+          submission_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          sender_name?: string
+          sender_type?: Database["public"]["Enums"]["sender_type"]
+          submission_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_messages_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      notifications: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          student_id: string
+          submission_id: string | null
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          student_id: string
+          submission_id?: string | null
+          title: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          student_id?: string
+          submission_id?: string | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notifications_submission_id_fkey"
+            columns: ["submission_id"]
+            isOneToOne: false
+            referencedRelation: "submissions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          department: string | null
+          email: string
+          full_name: string
+          id: string
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          full_name?: string
+          id: string
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          created_at?: string
+          department?: string | null
+          email?: string
+          full_name?: string
+          id?: string
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
+      submissions: {
+        Row: {
+          conversation_cleared: boolean
+          created_at: string
+          department: string | null
+          email: string
+          id: string
+          message: string
+          name: string
+          reply: string | null
+          status: Database["public"]["Enums"]["submission_status"]
+          student_id: string | null
+          subject: string | null
+          updated_at: string
+          year: string | null
+        }
+        Insert: {
+          conversation_cleared?: boolean
+          created_at?: string
+          department?: string | null
+          email: string
+          id?: string
+          message: string
+          name: string
+          reply?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          student_id?: string | null
+          subject?: string | null
+          updated_at?: string
+          year?: string | null
+        }
+        Update: {
+          conversation_cleared?: boolean
+          created_at?: string
+          department?: string | null
+          email?: string
+          id?: string
+          message?: string
+          name?: string
+          reply?: string | null
+          status?: Database["public"]["Enums"]["submission_status"]
+          student_id?: string | null
+          subject?: string | null
+          updated_at?: string
+          year?: string | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "student"
+      sender_type: "STUDENT" | "ADMIN"
+      submission_status: "NEW" | "READ" | "REPLIED"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +359,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "student"],
+      sender_type: ["STUDENT", "ADMIN"],
+      submission_status: ["NEW", "READ", "REPLIED"],
+    },
   },
 } as const
