@@ -1900,11 +1900,28 @@ Continue developing this project in the [Lovable editor](https://lovable.dev/pro
 
 ## Development
 
-Prefer working locally? You need Node.js and npm — [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating).
+Prefer working locally? Install Bun from [bun.sh](https://bun.sh/).
 
 ```sh
 git clone <this-repository-url>
 cd <repository-name>
-npm i
-npm run dev
+bun install
+bun run dev
 ```
+
+## Firebase Setup
+
+This app uses Firebase Authentication and Cloud Firestore. Before testing account creation or submissions:
+
+1. In the Firebase console for `jemeawebsite`, enable Email/Password and Google under Authentication, add your website domain to Authorized domains, and create the default Firestore database.
+2. To grant an administrator, find the person's Firebase Authentication UID, then create `/admins/{UID}` in Firestore with `{ "enabled": true }`. Only project owners can write this collection; sign out and back in after granting access.
+3. Deploy the repository's Firestore rules and index with the Firebase CLI:
+
+  ```sh
+  bunx firebase-tools login
+  bunx firebase-tools deploy --only firestore:rules,firestore:indexes
+  ```
+
+4. The supplied web configuration is in the ignored `.env.local` file. Set the same `VITE_FIREBASE_*` variables in the production hosting environment before building.
+
+The Firebase web API key is public app configuration, not an admin credential. Never put a service-account key in client code or commit it.

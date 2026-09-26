@@ -1,4 +1,3 @@
-import { MessagesSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export function Logo({
@@ -10,14 +9,14 @@ export function Logo({
 }) {
   return (
     <span className={cn("inline-flex items-center gap-2", className)}>
-      <span
+      <img
+        src="/favicon.ico"
+        alt=""
         className={cn(
-          "flex size-9 items-center justify-center rounded-xl",
-          tone === "inverted" ? "bg-primary/20 text-primary" : "bg-primary text-primary-foreground",
+          "size-9 rounded-xl bg-white object-contain p-0.5 ring-1 ring-border",
+          tone === "inverted" && "ring-white/30",
         )}
-      >
-        <MessagesSquare className="size-5" />
-      </span>
+      />
       <span
         className={cn(
           "font-display text-xl font-semibold tracking-tight",

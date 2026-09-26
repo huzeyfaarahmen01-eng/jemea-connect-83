@@ -3,7 +3,8 @@ import { ArrowRight, BellRing, LineChart, MessagesSquare, ShieldCheck, Send } fr
 import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import heroImage from "@/assets/hero-students.jpg";
+import { useAuth } from "@/hooks/useAuth";
+import heroImage from "@/assets/quran-study.jpeg";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -48,7 +49,11 @@ const features = [
 ];
 
 const steps = [
-  { step: "01", title: "Send it", body: "Describe your idea or concern and submit it in a minute." },
+  {
+    step: "01",
+    title: "Send it",
+    body: "Describe your idea or concern and submit it in a minute.",
+  },
   {
     step: "02",
     title: "It gets reviewed",
@@ -62,6 +67,8 @@ const steps = [
 ];
 
 function Home() {
+  const { user, loading } = useAuth();
+
   return (
     <PublicLayout>
       <section className="hero-canvas border-b border-border">
@@ -79,19 +86,38 @@ function Home() {
               gives administration the tools to review, respond and keep track of every one.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Button asChild size="lg">
-                <Link to="/contact">
-                  Submit an idea
-                  <ArrowRight className="size-4" />
-                </Link>
-              </Button>
-              <Button asChild size="lg" variant="outline">
-                <Link to="/status">Check a submission</Link>
-              </Button>
+              {!loading && user ? (
+                <>
+                  <Button asChild size="lg">
+                    <Link to="/contact">
+                      Submit an idea
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline">
+                    <Link to="/status">Check a submission</Link>
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button asChild size="lg">
+                    <Link to="/auth" search={{ mode: "register" }}>
+                      Create student account
+                      <ArrowRight className="size-4" />
+                    </Link>
+                  </Button>
+                  <Button asChild size="lg" variant="outline">
+                    <Link to="/auth">Sign in</Link>
+                  </Button>
+                </>
+              )}
             </div>
             <p className="mt-6 text-sm text-muted-foreground">
               Already registered?{" "}
-              <Link to="/auth" className="font-semibold text-primary underline-offset-4 hover:underline">
+              <Link
+                to="/auth"
+                className="font-semibold text-primary underline-offset-4 hover:underline"
+              >
                 Sign in to the student portal
               </Link>
               .
@@ -101,10 +127,11 @@ function Home() {
           <div className="surface-panel overflow-hidden p-0">
             <img
               src={heroImage}
-              alt="Students discussing ideas together in a campus study lounge"
-              width={1600}
-              height={1104}
-              className="h-full w-full object-cover"
+              alt="Students studying together at laptops in a bright library"
+              width={736}
+              height={736}
+              fetchPriority="high"
+              className="aspect-square h-full w-full object-cover"
             />
           </div>
         </div>
@@ -112,7 +139,9 @@ function Home() {
 
       <section className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6 lg:py-20">
         <div className="max-w-2xl">
-          <h2 className="text-3xl font-semibold sm:text-4xl">Built around one promise: follow-up</h2>
+          <h2 className="text-3xl font-semibold sm:text-4xl">
+            Built around one promise: follow-up
+          </h2>
           <p className="mt-3 text-muted-foreground">
             Everything in Jemea exists to make sure a submission does not disappear after it is
             sent.
@@ -120,7 +149,10 @@ function Home() {
         </div>
         <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
-            <Card key={feature.title} className="h-full shadow-none transition-shadow hover:shadow-md">
+            <Card
+              key={feature.title}
+              className="h-full shadow-none transition-shadow hover:shadow-md"
+            >
               <CardContent className="pt-6">
                 <span className="flex size-10 items-center justify-center rounded-lg bg-secondary text-primary">
                   <feature.icon className="size-5" />

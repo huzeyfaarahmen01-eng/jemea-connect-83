@@ -1,0 +1,79 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        && get(/databases/$(database)/documents/admins/$(request.auth.uid)).data.enabled == true;
+    }
+
+    function validProfile(profile) {
+      return profile.keys().hasAll(['full_name', 'email', 'department', 'year'])
+        && profile.keys().hasOnly(['full_name', 'email', 'department', 'year', 'createdAt'])
+        && profile.email == request.auth.token.email
+        && profile.full_name is string
+        && profile.full_name.size() <= 120
+        && (profile.department == null || (profile.department is string && profile.department.size() <= 120))
+        && (profile.year == null || (profile.year is string && profile.year.size() <= 60));
+    }
+
+    match /admins/{userId} {
+      allow get: if signedIn() && request.auth.uid == userId;
+      allow list, create, update, delete: if false;
+    }
+
+    match /users/{userId} {
+      allow read: if isAdmin() || (signedIn() && request.auth.uid == userId);
+      allow create, update: if signedIn() && request.auth.uid == userId
+        && validProfile(request.resource.data);
+      allow delete: if false;
+    }
+
+    match /submissions/{submissionId} {
+      allow create: if signedIn()
+        && request.resource.data.keys().hasOnly([
+          'userId', 'name', 'email', 'department', 'year', 'subject', 'message',
+          'status', 'reply', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.keys().hasAll([
+          'userId', 'name', 'email', 'department', 'year', 'message',
+          'status', 'reply', 'createdAt', 'updatedAt'
+        ])
+        && request.resource.data.userId == request.auth.uid
+        && request.resource.data.email == request.auth.token.email
+        && request.resource.data.name is string
+        && request.resource.data.name.size() >= 2
+        && request.resource.data.name.size() <= 120
+        && request.resource.data.department is string
+        && request.resource.data.year is string
+        && request.resource.data.message is string
+        && request.resource.data.message.size() >= 10
+        && request.resource.data.message.size() <= 4000
+        && request.resource.data.status == 'NEW'
+        && request.resource.data.reply == null
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      allow get, list: if isAdmin()
+        || (signedIn() && resource.data.userId == request.auth.uid);
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['status', 'reply', 'updatedAt'])
+        && request.resource.data.status in ['NEW', 'READ', 'REPLIED']
+        && (request.resource.data.reply == null
+          || (request.resource.data.reply is string
+            && request.resource.data.reply.size() <= 4000))
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isAdmin();
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

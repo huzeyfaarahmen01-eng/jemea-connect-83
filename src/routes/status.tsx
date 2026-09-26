@@ -1,5 +1,4 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useState } from "react";
 import { FileSearch, Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -7,21 +6,10 @@ import { PublicLayout } from "@/components/site/PublicLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { STATUS_LABELS } from "@/lib/constants";
-import { lookupSubmissionStatus } from "@/lib/public.functions";
-
-type StatusRow = {
-  id: string;
-  subject: string | null;
-  status: string;
-  department: string | null;
-  year: string | null;
-  created_at: string;
-  updated_at: string;
-  reply: string | null;
-};
+import { Link } from "@tanstack/react-router";
+import { useAuth } from "@/hooks/useAuth";
+import { getMySubmissions, type Submission } from "@/lib/firebase.functions";
 
 export const Route = createFileRoute("/status")({
   head: () => ({
@@ -30,12 +18,13 @@ export const Route = createFileRoute("/status")({
       {
         name: "description",
         content:
-          "Enter your email address to see the status of your latest Jemea submissions and any reply from administration.",
+          "Sign in to see the status of your latest Jemea submissions and any reply from administration.",
       },
       { property: "og:title", content: "Check a submission status — Jemea" },
       {
         property: "og:description",
-        content: "See the status of your latest submissions and any reply from administration.",
+        content:
+          "Sign in to see the status of your latest submissions and any reply from administration.",
       },
     ],
   }),
@@ -49,22 +38,18 @@ function statusVariant(status: string) {
 }
 
 function StatusPage() {
-  const lookup = useServerFn(lookupSubmissionStatus);
-  const [email, setEmail] = useState("");
-  const [rows, setRows] = useState<StatusRow[] | null>(null);
+  const { user, loading: authLoading } = useAuth();
+  const [rows, setRows] = useState<Submission[] | null>(null);
   const [pending, setPending] = useState(false);
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      toast.error("Please enter a valid email address.");
-      return;
-    }
+    if (!user) return;
     setPending(true);
     try {
-      const result = await lookup({ data: { email: email.trim() } });
-      setRows(result.submissions as StatusRow[]);
-    } catch {
+      setRows(await getMySubmissions(user.uid));
+    } catch (error) {
+      console.error("getMySubmissions failed", error);
       toast.error("We could not look that up right now. Please try again.");
     } finally {
       setPending(false);
@@ -77,7 +62,7 @@ function StatusPage() {
         <div className="mx-auto w-full max-w-3xl px-4 py-12 text-center sm:px-6 lg:py-16">
           <h1 className="text-3xl font-bold sm:text-4xl">Check your submission status</h1>
           <p className="mt-3 text-muted-foreground">
-            Enter the email address you used. You will only see records submitted with that address.
+            Sign in to see your latest submissions and any replies from administration.
           </p>
         </div>
       </section>
@@ -86,25 +71,40 @@ function StatusPage() {
         <Card>
           <CardHeader>
             <CardTitle>Status lookup</CardTitle>
-            <CardDescription>We show your five most recent submissions.</CardDescription>
+            <CardDescription>
+              We show the five most recent submissions on your account.
+            </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
-              <div className="grid flex-1 gap-2">
-                <Label htmlFor="lookup-email">Email address</Label>
-                <Input
-                  id="lookup-email"
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="you@university.edu"
-                />
+            {authLoading ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Loading your account…
               </div>
-              <Button type="submit" disabled={pending}>
-                {pending && <Loader2 className="size-4 animate-spin" />}
-                {pending ? "Checking…" : "Check status"}
-              </Button>
-            </form>
+            ) : user ? (
+              <form onSubmit={handleSubmit}>
+                <Button type="submit" disabled={pending}>
+                  {pending && <Loader2 className="size-4 animate-spin" />}
+                  {pending ? "Checking…" : "Check status"}
+                </Button>
+              </form>
+            ) : (
+              <div className="grid gap-4">
+                <p className="text-sm text-muted-foreground">
+                  Sign in to securely see the status and replies for your submissions.
+                </p>
+                <div className="flex flex-wrap gap-3">
+                  <Button asChild>
+                    <Link to="/auth">Sign in</Link>
+                  </Button>
+                  <Button asChild variant="outline">
+                    <Link to="/auth" search={{ mode: "register" }}>
+                      Create account
+                    </Link>
+                  </Button>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -115,7 +115,7 @@ function StatusPage() {
                 <FileSearch className="size-8 text-muted-foreground" />
                 <h2 className="text-lg font-semibold">No submissions found</h2>
                 <p className="max-w-sm text-sm text-muted-foreground">
-                  We could not find anything submitted with that email address.
+                  There are no submissions on this account yet.
                 </p>
               </div>
             ) : (
@@ -123,9 +123,7 @@ function StatusPage() {
                 <Card key={row.id}>
                   <CardContent className="pt-6">
                     <div className="flex flex-wrap items-center justify-between gap-3">
-                      <h3 className="text-base font-semibold">
-                        {row.subject || "Submission"}
-                      </h3>
+                      <h3 className="text-base font-semibold">{row.subject || "Submission"}</h3>
                       <Badge variant={statusVariant(row.status)}>
                         {STATUS_LABELS[row.status] ?? row.status}
                       </Badge>
@@ -134,7 +132,7 @@ function StatusPage() {
                       <div>
                         <dt className="text-muted-foreground">Submitted</dt>
                         <dd className="font-medium">
-                          {new Date(row.created_at).toLocaleDateString()}
+                          {row.createdAt?.toDate().toLocaleDateString() ?? "Pending"}
                         </dd>
                       </div>
                       <div>

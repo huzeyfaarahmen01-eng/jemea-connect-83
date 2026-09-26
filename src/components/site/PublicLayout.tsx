@@ -1,22 +1,58 @@
 import { Link } from "@tanstack/react-router";
-import { Menu, X } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { Menu, Moon, Sun, X } from "lucide-react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/site/Logo";
 import { useAuth } from "@/hooks/useAuth";
+import { auth } from "@/integrations/firebase/client";
+import { signOut } from "firebase/auth";
 
-const links = [
+const publicLinks = [
   { to: "/", label: "Home" },
   { to: "/about", label: "About" },
+];
+
+const studentLinks = [
   { to: "/contact", label: "Submit an idea" },
   { to: "/status", label: "Check status" },
 ];
 
 export function PublicLayout({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [theme, setTheme] = useState<"light" | "dark">("light");
   const { user, isAdmin, loading } = useAuth();
+  const signedIn = !loading && Boolean(user);
+  const links = signedIn ? [...publicLinks, ...studentLinks] : publicLinks;
 
-  const portalTo = isAdmin ? "/admin/dashboard" : "/student/dashboard";
+  useEffect(() => {
+    let savedTheme: string | null = null;
+    try {
+      savedTheme = localStorage.getItem("jemea-theme");
+    } catch {
+      savedTheme = null;
+    }
+    const initialTheme =
+      savedTheme === "light" || savedTheme === "dark"
+        ? savedTheme
+        : window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light";
+    setTheme(initialTheme);
+    document.documentElement.classList.toggle("dark", initialTheme === "dark");
+    document.documentElement.style.colorScheme = initialTheme;
+  }, []);
+
+  function toggleTheme() {
+    const nextTheme = theme === "dark" ? "light" : "dark";
+    setTheme(nextTheme);
+    document.documentElement.classList.toggle("dark", nextTheme === "dark");
+    document.documentElement.style.colorScheme = nextTheme;
+    try {
+      localStorage.setItem("jemea-theme", nextTheme);
+    } catch {
+      // Keep the current choice for this session when storage is unavailable.
+    }
+  }
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -40,10 +76,30 @@ export function PublicLayout({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="hidden items-center gap-2 md:flex">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={theme === "dark"}
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
             {!loading && user ? (
-              <Button asChild>
-                <Link to={portalTo}>My portal</Link>
-              </Button>
+              <>
+                {isAdmin && (
+                  <Button asChild variant="ghost">
+                    <Link to="/admin">Admin dashboard</Link>
+                  </Button>
+                )}
+                <Button asChild variant="ghost">
+                  <Link to="/auth">Account</Link>
+                </Button>
+                <Button variant="outline" onClick={() => void signOut(auth)}>
+                  Sign out
+                </Button>
+              </>
             ) : (
               <>
                 <Button asChild variant="ghost">
@@ -58,15 +114,26 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             )}
           </div>
 
-          <Button
-            variant="outline"
-            size="icon"
-            className="md:hidden"
-            aria-label={open ? "Close menu" : "Open menu"}
-            onClick={() => setOpen((value) => !value)}
-          >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
-          </Button>
+          <div className="flex items-center gap-1 md:hidden">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              aria-pressed={theme === "dark"}
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
+              aria-label={open ? "Close menu" : "Open menu"}
+              onClick={() => setOpen((value) => !value)}
+            >
+              {open ? <X className="size-5" /> : <Menu className="size-5" />}
+            </Button>
+          </div>
         </div>
 
         {open && (
@@ -85,9 +152,24 @@ export function PublicLayout({ children }: { children: ReactNode }) {
             </nav>
             <div className="flex flex-col gap-2">
               {!loading && user ? (
-                <Button asChild onClick={() => setOpen(false)}>
-                  <Link to={portalTo}>My portal</Link>
-                </Button>
+                <>
+                  {isAdmin && (
+                    <Button asChild variant="outline" onClick={() => setOpen(false)}>
+                      <Link to="/admin">Admin dashboard</Link>
+                    </Button>
+                  )}
+                  <Button asChild variant="outline" onClick={() => setOpen(false)}>
+                    <Link to="/auth">Account</Link>
+                  </Button>
+                  <Button
+                    onClick={() => {
+                      setOpen(false);
+                      void signOut(auth);
+                    }}
+                  >
+                    Sign out
+                  </Button>
+                </>
               ) : (
                 <>
                   <Button asChild variant="outline" onClick={() => setOpen(false)}>
@@ -145,11 +227,13 @@ export function PublicLayout({ children }: { children: ReactNode }) {
                   Student registration
                 </Link>
               </li>
-              <li>
-                <Link to="/admin/login" className="transition-colors hover:text-ink-foreground">
-                  Administrator sign in
-                </Link>
-              </li>
+              {isAdmin && (
+                <li>
+                  <Link to="/admin" className="transition-colors hover:text-ink-foreground">
+                    Admin dashboard
+                  </Link>
+                </li>
+              )}
             </ul>
           </div>
         </div>
